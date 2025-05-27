@@ -1,5 +1,7 @@
 # prowler-terraform
-A POC for running Prowler in an AWS account
+A POC for running Prowler in an AWS account.
+
+Relevant Prowler [Docker Compose](https://github.com/prowler-cloud/prowler/blob/master/docker-compose.yml) this is based off of
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
