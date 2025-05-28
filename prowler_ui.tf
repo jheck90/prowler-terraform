@@ -15,31 +15,32 @@ resource "aws_ecs_task_definition" "ui" {
       essential = true
       portMappings = [
         {
+          name          = "prowler-ui-port"
           containerPort = var.ui_port
           hostPort      = var.ui_port
           protocol      = "tcp"
         }
       ]
       environment = [
-        # { name = "PROWLER_UI_VERSION", value = var.prowler_ui_version },
-        { name = "AUTH_URL", value = "https://${var.app_domain}" },
-        { name = "API_BASE_URL", value = "https://${var.app_domain}/api/v1" },
-        { name = "NEXT_PUBLIC_API_DOCS_URL", value = "https://${var.app_domain}/api/v1/docs" },
+        { name = "PROWLER_UI_VERSION", value = var.prowler_ui_version },
+        { name = "AUTH_URL", value = "https://${var.ui_domain}" },
+        { name = "API_BASE_URL", value = "https://${var.api_domain}/api/v1" },
+        { name = "NEXT_PUBLIC_API_DOCS_URL", value = "https://${var.api_domain}/api/v1/docs" },
         { name = "AUTH_TRUST_HOST", value = "true" },
         { name = "DJANGO_BIND_ADDRESS", value = "0.0.0.0" },
         # { name = "UI_PORT", value = tostring(var.ui_port) },
         # { name = "NEXT_PUBLIC_PROWLER_RELEASE_VERSION", value = var.prowler_release_version },
 
         # Social login settings - these could be moved to secrets if needed
-        { name = "SOCIAL_GOOGLE_OAUTH_CALLBACK_URL", value = "${var.app_domain}/api/auth/callback/google" },
-        { name = "SOCIAL_GITHUB_OAUTH_CALLBACK_URL", value = "${var.app_domain}/api/auth/callback/github" }
+        # { name = "SOCIAL_GOOGLE_OAUTH_CALLBACK_URL", value = "${var.api_domain}/api/auth/callback/google" },
+        # { name = "SOCIAL_GITHUB_OAUTH_CALLBACK_URL", value = "${var.api_domain}/api/auth/callback/github" }
       ],
       secrets = [
         { name = "AUTH_SECRET", valueFrom = aws_secretsmanager_secret.auth_secret.arn },
-        { name = "SOCIAL_GOOGLE_OAUTH_CLIENT_ID", valueFrom = aws_secretsmanager_secret.google_oauth_client_id.arn },
-        { name = "SOCIAL_GOOGLE_OAUTH_CLIENT_SECRET", valueFrom = aws_secretsmanager_secret.google_oauth_client_secret.arn },
-        { name = "SOCIAL_GITHUB_OAUTH_CLIENT_ID", valueFrom = aws_secretsmanager_secret.github_oauth_client_id.arn },
-        { name = "SOCIAL_GITHUB_OAUTH_CLIENT_SECRET", valueFrom = aws_secretsmanager_secret.github_oauth_client_secret.arn }
+        # { name = "SOCIAL_GOOGLE_OAUTH_CLIENT_ID", valueFrom = aws_secretsmanager_secret.google_oauth_client_id.arn },
+        # { name = "SOCIAL_GOOGLE_OAUTH_CLIENT_SECRET", valueFrom = aws_secretsmanager_secret.google_oauth_client_secret.arn },
+        # { name = "SOCIAL_GITHUB_OAUTH_CLIENT_ID", valueFrom = aws_secretsmanager_secret.github_oauth_client_id.arn },
+        # { name = "SOCIAL_GITHUB_OAUTH_CLIENT_SECRET", valueFrom = aws_secretsmanager_secret.github_oauth_client_secret.arn }
       ],
       logConfiguration = {
         logDriver = "awslogs"
@@ -56,7 +57,7 @@ resource "aws_ecs_task_definition" "ui" {
 # ECS Service for UI
 resource "aws_ecs_service" "ui" {
   name                   = "prowler-ui"
-  cluster                = data.aws_ecs_cluster.main.id
+  cluster                = aws_ecs_cluster.main.id
   task_definition        = aws_ecs_task_definition.ui.arn
   desired_count          = 1
   launch_type            = "FARGATE"
@@ -73,10 +74,18 @@ resource "aws_ecs_service" "ui" {
     container_name   = "prowler-ui"
     container_port   = var.ui_port
   }
-  service_registries {
-    registry_arn = aws_service_discovery_service.prowler_ui.arn
+  service_connect_configuration {
+    enabled   = true
+    namespace = aws_service_discovery_private_dns_namespace.prowler.arn
+    service {
+      client_alias {
+        port     = 3000
+        dns_name = "dprowler-ui"
+      }
+      port_name      = "prowler-ui-port"
+      discovery_name = "prowler-ui"
+    }
   }
-
   depends_on = [
     aws_lb_listener_rule.ui,
     aws_iam_role_policy_attachment.ecs_execution_role_policy
@@ -105,7 +114,7 @@ resource "aws_lb_target_group" "ui" {
 
 # Load Balancer Listener Rule for UI
 resource "aws_lb_listener_rule" "ui" {
-  listener_arn = data.aws_lb_listener.main.arn
+  listener_arn = aws_lb_listener.public_secure.arn
   priority     = 110
 
   action {
@@ -114,12 +123,7 @@ resource "aws_lb_listener_rule" "ui" {
   }
   condition {
     host_header {
-      values = ["prowler.${var.environment}.i3verticals.cloud"]
-    }
-  }
-  condition {
-    path_pattern {
-      values = ["/*"]
+      values = ["${var.ui_domain}"]
     }
   }
 }
@@ -137,7 +141,7 @@ resource "aws_security_group" "ui_sg" {
     from_port       = var.ui_port
     to_port         = var.ui_port
     protocol        = "tcp"
-    security_groups = data.aws_lb.main.security_groups
+    security_groups = [aws_security_group.public_alb.id]
   }
   ingress {
     description = "Allow Traffic from VPC"
@@ -183,56 +187,12 @@ resource "aws_cloudwatch_log_group" "prowler_ui" {
 
 # Additional secrets for UI
 resource "aws_secretsmanager_secret" "auth_secret" {
-  name = "prowler/auth_secret"
+  name = "prowler/auth_secret2"
 }
 
 resource "aws_secretsmanager_secret_version" "auth_secret_value" {
   secret_id     = aws_secretsmanager_secret.auth_secret.id
   secret_string = var.auth_secret
-}
-
-resource "aws_secretsmanager_secret" "google_oauth_client_id" {
-  name = "prowler/google_oauth_client_id"
-}
-
-resource "aws_secretsmanager_secret_version" "google_oauth_client_id_value" {
-  secret_id = aws_secretsmanager_secret.google_oauth_client_id.id
-  secret_string = jsonencode({
-    google_oauth_client_id = var.google_oauth_client_id
-  })
-}
-
-resource "aws_secretsmanager_secret" "google_oauth_client_secret" {
-  name = "prowler/google_oauth_client_secret"
-}
-
-resource "aws_secretsmanager_secret_version" "google_oauth_client_secret_value" {
-  secret_id = aws_secretsmanager_secret.google_oauth_client_secret.id
-  secret_string = jsonencode({
-    google_oauth_client_secret = var.google_oauth_client_secret
-  })
-}
-
-resource "aws_secretsmanager_secret" "github_oauth_client_id" {
-  name = "prowler/github_oauth_client_id"
-}
-
-resource "aws_secretsmanager_secret_version" "github_oauth_client_id_value" {
-  secret_id = aws_secretsmanager_secret.github_oauth_client_id.id
-  secret_string = jsonencode({
-    github_oauth_client_id = var.github_oauth_client_id
-  })
-}
-
-resource "aws_secretsmanager_secret" "github_oauth_client_secret" {
-  name = "prowler/github_oauth_client_secret"
-}
-
-resource "aws_secretsmanager_secret_version" "github_oauth_client_secret_value" {
-  secret_id = aws_secretsmanager_secret.github_oauth_client_secret.id
-  secret_string = jsonencode({
-    github_oauth_client_secret = var.github_oauth_client_secret
-  })
 }
 
 # Update the secrets access policy to include UI secrets
@@ -248,10 +208,6 @@ resource "aws_iam_policy" "ui_secrets_access" {
         Effect = "Allow"
         Resource = [
           aws_secretsmanager_secret.auth_secret.arn,
-          aws_secretsmanager_secret.google_oauth_client_id.arn,
-          aws_secretsmanager_secret.google_oauth_client_secret.arn,
-          aws_secretsmanager_secret.github_oauth_client_id.arn,
-          aws_secretsmanager_secret.github_oauth_client_secret.arn
         ]
       }
     ]
