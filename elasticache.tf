@@ -54,29 +54,19 @@ resource "aws_security_group" "valkey_sg" {
   name        = "prowler-valkey-sg"
   description = "Security group for Prowler Valkey"
   vpc_id      = data.aws_vpc.main.id
-
+  ingress {
+    description = "Allow PostgreSQL from VPC"
+    from_port   = var.postgres_port
+    to_port     = var.postgres_port
+    protocol    = "tcp"
+    cidr_blocks = [data.aws_vpc.main.cidr_block, var.vpn_cidr]
+  }
   ingress {
     description     = "Allow Valkey from API"
     from_port       = var.valkey_port
     to_port         = var.valkey_port
     protocol        = "tcp"
     security_groups = [aws_security_group.api_sg.id]
-  }
-
-  ingress {
-    description     = "Allow Valkey from worker"
-    from_port       = var.valkey_port
-    to_port         = var.valkey_port
-    protocol        = "tcp"
-    security_groups = [aws_security_group.worker_sg.id]
-  }
-
-  ingress {
-    description     = "Allow Valkey from worker-beat"
-    from_port       = var.valkey_port
-    to_port         = var.valkey_port
-    protocol        = "tcp"
-    security_groups = [aws_security_group.worker_beat_sg.id]
   }
 
   egress {

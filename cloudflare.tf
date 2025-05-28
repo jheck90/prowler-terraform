@@ -13,8 +13,23 @@
 
 # resource "cloudflare_dns_record" "prowler" {
 #   zone_id = data.cloudflare_zone.main.zone_id
-#   name    = "prowler.${var.environment}"
-#   content = data.aws_lb.main.dns_name
+#   name    = "ui-prowler.${var.environment}"
+#   content = aws_lb.public.dns_name
+#   type    = "CNAME"
+#   ttl     = 1
+#   proxied = true
+
+#   ## Comment this out if you actually need to update cloudflare
+#   lifecycle {
+#     ignore_changes = all
+#   }
+# }
+
+
+# resource "cloudflare_dns_record" "api_prowler" {
+#   zone_id = data.cloudflare_zone.main.zone_id
+#   name    = "api-prowler.${var.environment}"
+#   content = aws_lb.public.dns_name
 #   type    = "CNAME"
 #   ttl     = 1
 #   proxied = true

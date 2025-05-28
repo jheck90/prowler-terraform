@@ -13,8 +13,13 @@ variable "scalr_environment_id" {
   type        = string
 }
 
-variable "app_domain" {
-  description = "Domain name for the application"
+variable "api_domain" {
+  description = "Domain name for the api"
+  type        = string
+}
+
+variable "ui_domain" {
+  description = "Domain name for the ui"
   type        = string
 }
 
@@ -27,7 +32,7 @@ variable "vpn_cidr" {
 variable "prowler_api_version" {
   description = "Prowler API version"
   type        = string
-  default     = "latest"
+  default     = "stable"
 }
 
 variable "django_port" {
@@ -118,7 +123,7 @@ variable "django_broker_visibility_timeout" {
 variable "prowler_ui_version" {
   description = "Prowler UI version"
   type        = string
-  default     = "latest"
+  default     = "stable"
 }
 
 variable "ui_port" {
@@ -255,4 +260,37 @@ variable "prowler_volume_size" {
 variable "prowler_volume_type" {
   type    = string
   default = "gp3"
+}
+
+locals {
+  worker_env_vars = [
+    # Core settings
+    { name = "PROWLER_API_VERSION", value = var.prowler_api_version },
+    { name = "DJANGO_LOGGING_FORMATTER", value = var.django_logging_formatter },
+    { name = "DJANGO_LOGGING_LEVEL", value = var.django_logging_level },
+    { name = "DJANGO_SETTINGS_MODULE", value = var.django_settings_module },
+
+    # DB settings
+    { name = "POSTGRES_HOST", value = local.postgres_host_only },
+    { name = "POSTGRES_PORT", value = tostring(var.postgres_port) },
+    { name = "POSTGRES_ADMIN_USER", value = var.postgres_user },
+    { name = "POSTGRES_USER", value = var.postgres_user },
+    { name = "POSTGRES_DB", value = var.postgres_db },
+
+    # Valkey/Redis settings
+    { name = "VALKEY_HOST", value = local.valkey_host_only },
+    { name = "VALKEY_PORT", value = tostring(var.valkey_port) },
+    { name = "VALKEY_DB", value = tostring(var.valkey_db) },
+
+    # Worker-beat specific settings
+    { name = "DJANGO_BROKER_VISIBILITY_TIMEOUT", value = tostring(var.django_broker_visibility_timeout) }
+  ]
+
+  worker_secret_vars = [
+    { name = "POSTGRES_ADMIN_PASSWORD", valueFrom = aws_secretsmanager_secret.postgres_admin_password.arn },
+    { name = "POSTGRES_PASSWORD", valueFrom = aws_secretsmanager_secret.postgres_password.arn },
+    { name = "DJANGO_TOKEN_SIGNING_KEY", valueFrom = aws_secretsmanager_secret.django_token_signing_key.arn },
+    { name = "DJANGO_TOKEN_VERIFYING_KEY", valueFrom = aws_secretsmanager_secret.django_token_verifying_key.arn },
+    { name = "DJANGO_SECRETS_ENCRYPTION_KEY", valueFrom = aws_secretsmanager_secret.django_secrets_encryption_key.arn }
+  ]
 }
