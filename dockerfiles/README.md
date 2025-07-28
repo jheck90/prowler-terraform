@@ -89,4 +89,20 @@ export async function GET() {
 ```
 
 5. replace whatever Dockerfiles are in `/ui` or `/api` with what I have in this dir.
-6. Push those built docker images to your local ECR, and point ECS to them.
+6. Build api normally, and UI as such (unsure how many of these args are redundant and what can be passed as env vars to ECS):
+
+```bash
+docker build \                                                                                                                                                        11:11:09
+  --build-arg NEXT_PUBLIC_API_BASE_URL=http://api.prowler-app.local:8080/api/v1 \
+  --build-arg NEXT_PUBLIC_API_DOCS_URL=http://api.prowler-app.local:8080/api/v1/docs \
+  --build-arg SITE_URL=https://prowler.env.redacted.cloud \
+  --build-arg API_BASE_URL=http://api.prowler-app.local:8080/api/v1 \
+  --build-arg AUTH_URL=https://prowler.env.redacted.cloud \
+  --build-arg AUTH_TRUST_HOST=true \
+  --build-arg AUTH_SECRET=your_secret \
+  --build-arg DJANGO_BIND_ADDRESS=0.0.0.0 \
+  --build-arg UI_PORT=3000 \
+  --build-arg PROWLER_UI_VERSION=stable \
+  -t prowler-ui .
+  ```
+7. Push those built docker images to your local ECR, and point ECS to them.
