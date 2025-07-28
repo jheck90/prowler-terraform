@@ -3,6 +3,10 @@ A POC for running Prowler in an AWS account.
 
 Relevant Prowler [Docker Compose](https://github.com/prowler-cloud/prowler/blob/master/docker-compose.yml) this is based off of
 
+## This requires custom Docker images for your org.
+
+- See `/dockerfiles` for reference
+
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
