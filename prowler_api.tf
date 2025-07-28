@@ -131,42 +131,6 @@ resource "aws_ecs_service" "api" {
   }
 }
 
-# API Load Balancer Target Group
-# resource "aws_lb_target_group" "api" {
-#   name        = "prowler-api-tg"
-#   port        = var.django_port
-#   protocol    = "HTTP"
-#   vpc_id      = data.aws_vpc.main.id
-#   target_type = "ip"
-
-#   health_check {
-#     path                = "/api/v1/" # Simple endpoint that always returns 200
-#     port                = "traffic-port"
-#     protocol            = "HTTP"
-#     healthy_threshold   = 2         # Minimum number of consecutive successful checks
-#     unhealthy_threshold = 5         # Number of consecutive failed checks before marking unhealthy
-#     timeout             = 10        # Seconds to wait for a response
-#     interval            = 30        # Seconds between health checks
-#     matcher             = "200-499" # Consider any 2XX or 3XX response as healthy
-#   }
-# }
-
-# # Load Balancer Listener Rule for API
-# resource "aws_lb_listener_rule" "api" {
-#   listener_arn = aws_lb_listener.public_secure.arn
-#   priority     = 100
-
-#   action {
-#     type             = "forward"
-#     target_group_arn = aws_lb_target_group.api.arn
-#   }
-#   condition {
-#     host_header {
-#       values = ["prowler-api.cisdev.i3verticals.cloud"]
-#     }
-#   }
-# }
-
 # Security Group for API service
 # TODO
 #trivy:ignore:AVD-AWS-0104

@@ -24,26 +24,6 @@ resource "aws_ecs_task_definition" "ui" {
       environment = [
         { name = "HOSTNAME", value = "0.0.0.0" },
         { name = "PORT", value = "3000" },
-        # { name = "PROWLER_UI_VERSION", value = var.prowler_ui_version },
-        # { name = "AUTH_URL", value = "https://${var.ui_domain}" },
-        # { name = "API_BASE_URL", value = "https://${var.api_domain}/api/v1" },
-        # { name = "NEXT_PUBLIC_API_BASE_URL", value = "https://${var.api_domain}/api/v1" },
-        # { name = "NEXT_PUBLIC_API_DOCS_URL", value = "https://${var.api_domain}/api/v1/docs" },
-        # { name = "AUTH_TRUST_HOST", value = "true" },
-        # { name = "DJANGO_BIND_ADDRESS", value = "0.0.0.0" },
-        # { name = "UI_PORT", value = tostring(var.ui_port) },
-        # { name = "NEXT_PUBLIC_PROWLER_RELEASE_VERSION", value = var.prowler_release_version },
-
-        # Social login settings - these could be moved to secrets if needed
-        # { name = "SOCIAL_GOOGLE_OAUTH_CALLBACK_URL", value = "${var.api_domain}/api/auth/callback/google" },
-        # { name = "SOCIAL_GITHUB_OAUTH_CALLBACK_URL", value = "${var.api_domain}/api/auth/callback/github" }
-      ],
-      secrets = [
-        # { name = "AUTH_SECRET", valueFrom = aws_secretsmanager_secret.auth_secret.arn },
-        # { name = "SOCIAL_GOOGLE_OAUTH_CLIENT_ID", valueFrom = aws_secretsmanager_secret.google_oauth_client_id.arn },
-        # { name = "SOCIAL_GOOGLE_OAUTH_CLIENT_SECRET", valueFrom = aws_secretsmanager_secret.google_oauth_client_secret.arn },
-        # { name = "SOCIAL_GITHUB_OAUTH_CLIENT_ID", valueFrom = aws_secretsmanager_secret.github_oauth_client_id.arn },
-        # { name = "SOCIAL_GITHUB_OAUTH_CLIENT_SECRET", valueFrom = aws_secretsmanager_secret.github_oauth_client_secret.arn }
       ],
       logConfiguration = {
         logDriver = "awslogs"
