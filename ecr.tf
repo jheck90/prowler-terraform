@@ -117,6 +117,42 @@ resource "aws_iam_policy" "ecr_access" {
   })
 }
 
+# ECR repository for Metabase
+resource "aws_ecr_repository" "nginx" {
+  name                 = "${var.environment}-nginx"
+  image_tag_mutability = "MUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+
+  tags = merge({
+    Name = "nginx-ecr"
+  })
+}
+
+resource "aws_ecr_lifecycle_policy" "nginx" {
+  repository = aws_ecr_repository.nginx.name
+
+  policy = jsonencode({
+    rules = [
+      {
+        rulePriority = 1
+        description  = "Keep last 5 images"
+        selection = {
+          tagStatus     = "tagged"
+          tagPrefixList = ["v"]
+          countType     = "imageCountMoreThan"
+          countNumber   = 5
+        }
+        action = {
+          type = "expire"
+        }
+      }
+    ]
+  })
+}
+
 # Update ECS execution role to allow pulling from ECR
 resource "aws_iam_role_policy_attachment" "ecs_ecr_access" {
   role       = aws_iam_role.ecs_execution_role.name

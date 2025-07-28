@@ -19,7 +19,11 @@ resource "aws_db_instance" "postgres" {
     Name        = "prowler-postgres"
     Environment = var.environment
   }
+  lifecycle {
+    ignore_changes = [engine_version]
+  }
 }
+
 
 # DB Subnet Group
 resource "aws_db_subnet_group" "postgres" {
@@ -47,7 +51,13 @@ resource "aws_security_group" "postgres_sg" {
     protocol    = "tcp"
     cidr_blocks = [data.aws_vpc.main.cidr_block, var.vpn_cidr]
   }
-
+  ingress {
+    description     = "Allow Valkey from API"
+    from_port       = var.valkey_port
+    to_port         = var.valkey_port
+    protocol        = "tcp"
+    security_groups = [aws_security_group.api_sg.id]
+  }
   egress {
     from_port   = 0
     to_port     = 0
@@ -102,27 +112,4 @@ resource "aws_ssm_parameter" "postgres_db" {
   tags = {
     Environment = var.environment
   }
-}
-
-# Enhanced monitoring role for PostgreSQL
-resource "aws_iam_role" "rds_enhanced_monitoring" {
-  name = "prowler-rds-enhanced-monitoring"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "monitoring.rds.amazonaws.com"
-        }
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "rds_enhanced_monitoring" {
-  role       = aws_iam_role.rds_enhanced_monitoring.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"
 }

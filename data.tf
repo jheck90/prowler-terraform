@@ -1,3 +1,20 @@
+data "terraform_remote_state" "rs_cloudflare" {
+  backend = "remote"
+
+  config = {
+    hostname     = "redacted.scalr.io"
+    organization = var.scalr_environment_id
+    workspaces = {
+      name = "cloudflare"
+    }
+  }
+}
+
+locals {
+  aws_cert_arn       = data.terraform_remote_state.rs_cloudflare.outputs.aws_cert_arn
+  cloudflare_cert_id = data.terraform_remote_state.rs_cloudflare.outputs.cloudflare_cert_id
+}
+
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
@@ -50,30 +67,5 @@ data "aws_subnets" "protected" {
   filter {
     name   = "tag:Network"
     values = ["protected"]
-  }
-}
-
-data "aws_ecs_cluster" "main" {
-  cluster_name = "prowler-ecs-cluster"
-  depends_on   = [aws_ecs_cluster.main]
-}
-
-
-# TODO
-data "aws_lb_listener" "main" {
-  arn = "arn:aws:elasticloadbalancing:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:listener/app/public-alb/[redacted]/[redacted]"
-}
-
-data "aws_lb" "main" {
-  arn = "arn:aws:elasticloadbalancing:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:loadbalancer/app/public-alb/[redacted]"
-}
-
-
-data "aws_ami" "linux" {
-  most_recent = true
-  owners      = ["amazon"]
-  filter {
-    name   = "name"
-    values = ["amzn2-ami-kernel-5.10-hvm-2.0.2025*-x86_64-*"]
   }
 }

@@ -13,8 +13,8 @@ variable "scalr_environment_id" {
   type        = string
 }
 
-variable "app_domain" {
-  description = "Domain name for the application"
+variable "ui_domain" {
+  description = "Domain name for the ui"
   type        = string
 }
 
@@ -27,7 +27,7 @@ variable "vpn_cidr" {
 variable "prowler_api_version" {
   description = "Prowler API version"
   type        = string
-  default     = "latest"
+  default     = "stable_v1.0.0"
 }
 
 variable "django_port" {
@@ -63,7 +63,7 @@ variable "django_logging_formatter" {
 variable "django_logging_level" {
   description = "Django logging level"
   type        = string
-  default     = "INFO"
+  default     = "DEBUG"
 }
 
 variable "django_workers" {
@@ -118,7 +118,7 @@ variable "django_broker_visibility_timeout" {
 variable "prowler_ui_version" {
   description = "Prowler UI version"
   type        = string
-  default     = "latest"
+  default     = "stable_v1.4.3"
 }
 
 variable "ui_port" {
@@ -130,7 +130,7 @@ variable "ui_port" {
 variable "prowler_release_version" {
   description = "Prowler release version"
   type        = string
-  default     = "v5.6.0"
+  default     = "v5.7.5"
 }
 
 # PostgreSQL variables
@@ -143,7 +143,7 @@ variable "postgres_port" {
 variable "postgres_admin_user" {
   description = "PostgreSQL admin username"
   type        = string
-  default     = "prowler_admin"
+  default     = "postgres"
 }
 
 variable "postgres_admin_password" {
@@ -155,7 +155,7 @@ variable "postgres_admin_password" {
 variable "postgres_user" {
   description = "PostgreSQL application username"
   type        = string
-  default     = "prowler"
+  default     = "postgres"
 }
 
 variable "postgres_password" {

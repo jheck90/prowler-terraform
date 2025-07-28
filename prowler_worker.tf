@@ -3,15 +3,15 @@ resource "aws_ecs_task_definition" "worker" {
   family                   = "prowler-worker"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
-  cpu                      = "512"
-  memory                   = "1024"
+  cpu                      = "2048"
+  memory                   = "4096"
   execution_role_arn       = aws_iam_role.ecs_execution_role.arn
   task_role_arn            = aws_iam_role.ecs_task_role.arn
 
   container_definitions = jsonencode([
     {
       name         = "prowler-worker"
-      image        = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/prowler-api:${var.prowler_api_version}"
+      image        = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.id}.amazonaws.com/prowler-api:${var.prowler_api_version}"
       essential    = true
       portMappings = [] # Worker doesn't expose ports
       environment = [
@@ -22,6 +22,7 @@ resource "aws_ecs_task_definition" "worker" {
         { name = "DJANGO_TMP_OUTPUT_DIRECTORY", value = "/tmp/prowler_api_output" },
         { name = "DJANGO_FINDINGS_BATCH_SIZE", value = tostring(var.django_findings_batch_size) },
         { name = "DJANGO_SETTINGS_MODULE", value = var.django_settings_module },
+        { name = "DJANGO_DEBUG", value = "True" },
 
         # DB settings
         { name = "POSTGRES_HOST", value = local.postgres_host_only },
@@ -34,9 +35,10 @@ resource "aws_ecs_task_definition" "worker" {
         { name = "VALKEY_HOST", value = local.valkey_host_only },
         { name = "VALKEY_PORT", value = tostring(var.valkey_port) },
         { name = "VALKEY_DB", value = tostring(var.valkey_db) },
+        { name = "VALKEY_SSL", value = "true" },
 
         # S3 output settings (if needed)
-        { name = "DJANGO_OUTPUT_S3_AWS_DEFAULT_REGION", value = data.aws_region.current.name },
+        { name = "DJANGO_OUTPUT_S3_AWS_DEFAULT_REGION", value = data.aws_region.current.id },
 
         # Worker specific settings
         { name = "DJANGO_BROKER_VISIBILITY_TIMEOUT", value = tostring(var.django_broker_visibility_timeout) }
@@ -52,11 +54,12 @@ resource "aws_ecs_task_definition" "worker" {
         logDriver = "awslogs"
         options = {
           "awslogs-group"         = aws_cloudwatch_log_group.prowler_worker.name
-          "awslogs-region"        = data.aws_region.current.name
+          "awslogs-region"        = data.aws_region.current.id
           "awslogs-stream-prefix" = "worker"
         }
       },
-      command = ["/home/prowler/docker-entrypoint.sh", "worker"]
+      entryPoint = ["../docker-entrypoint.sh"]
+      command    = ["worker"]
     }
   ])
 
@@ -69,7 +72,7 @@ resource "aws_ecs_task_definition" "worker" {
 # ECS Service for Worker
 resource "aws_ecs_service" "worker" {
   name                   = "prowler-worker"
-  cluster                = data.aws_ecs_cluster.main.id
+  cluster                = aws_ecs_cluster.main.id
   task_definition        = aws_ecs_task_definition.worker.arn
   desired_count          = 1 # Adjust based on load requirements
   launch_type            = "FARGATE"
@@ -80,14 +83,10 @@ resource "aws_ecs_service" "worker" {
     security_groups  = [aws_security_group.worker_sg.id]
     assign_public_ip = false
   }
-
-  service_registries {
-    registry_arn = aws_service_discovery_service.prowler_worker.arn
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = false
   }
-
-  depends_on = [
-    aws_iam_role_policy_attachment.ecs_execution_role_policy
-  ]
 }
 
 # Security Group for Worker service

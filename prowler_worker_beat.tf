@@ -11,7 +11,7 @@ resource "aws_ecs_task_definition" "worker_beat" {
   container_definitions = jsonencode([
     {
       name         = "prowler-worker-beat"
-      image        = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/prowler-api:${var.prowler_api_version}"
+      image        = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.id}.amazonaws.com/prowler-api:${var.prowler_api_version}"
       essential    = true
       portMappings = [] # Worker-beat doesn't expose ports
       environment = [
@@ -20,6 +20,7 @@ resource "aws_ecs_task_definition" "worker_beat" {
         { name = "DJANGO_LOGGING_FORMATTER", value = var.django_logging_formatter },
         { name = "DJANGO_LOGGING_LEVEL", value = var.django_logging_level },
         { name = "DJANGO_SETTINGS_MODULE", value = var.django_settings_module },
+        { name = "DJANGO_DEBUG", value = "True" },
 
         # DB settings
         { name = "POSTGRES_HOST", value = local.postgres_host_only },
@@ -32,6 +33,7 @@ resource "aws_ecs_task_definition" "worker_beat" {
         { name = "VALKEY_HOST", value = local.valkey_host_only },
         { name = "VALKEY_PORT", value = tostring(var.valkey_port) },
         { name = "VALKEY_DB", value = tostring(var.valkey_db) },
+        { name = "VALKEY_SSL", value = "true" },
 
         # Worker-beat specific settings
         { name = "DJANGO_BROKER_VISIBILITY_TIMEOUT", value = tostring(var.django_broker_visibility_timeout) }
@@ -47,11 +49,12 @@ resource "aws_ecs_task_definition" "worker_beat" {
         logDriver = "awslogs"
         options = {
           "awslogs-group"         = aws_cloudwatch_log_group.prowler_worker_beat.name
-          "awslogs-region"        = data.aws_region.current.name
+          "awslogs-region"        = data.aws_region.current.id
           "awslogs-stream-prefix" = "worker-beat"
         }
       },
-      command = ["../docker-entrypoint.sh", "beat"]
+      entryPoint = ["../docker-entrypoint.sh"],
+      command    = ["beat"]
     }
   ])
 }
@@ -59,7 +62,7 @@ resource "aws_ecs_task_definition" "worker_beat" {
 # ECS Service for Worker-Beat
 resource "aws_ecs_service" "worker_beat" {
   name                   = "prowler-worker-beat"
-  cluster                = data.aws_ecs_cluster.main.id
+  cluster                = aws_ecs_cluster.main.id
   task_definition        = aws_ecs_task_definition.worker_beat.arn
   desired_count          = 1 # Beat services usually only need 1 instance
   launch_type            = "FARGATE"
@@ -70,14 +73,10 @@ resource "aws_ecs_service" "worker_beat" {
     security_groups  = [aws_security_group.worker_beat_sg.id]
     assign_public_ip = false
   }
-
-  service_registries {
-    registry_arn = aws_service_discovery_service.prowler_worker_beat.arn
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = false
   }
-
-  depends_on = [
-    aws_iam_role_policy_attachment.ecs_execution_role_policy
-  ]
 }
 
 # Security Group for Worker-Beat service
