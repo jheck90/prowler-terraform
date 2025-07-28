@@ -62,6 +62,13 @@ resource "aws_security_group" "valkey_sg" {
     cidr_blocks = [data.aws_vpc.main.cidr_block, var.vpn_cidr]
   }
   ingress {
+    description = "Allow PostgreSQL from VPC"
+    from_port   = var.postgres_port
+    to_port     = var.postgres_port
+    protocol    = "tcp"
+    cidr_blocks = [data.aws_vpc.main.cidr_block, var.vpn_cidr]
+  }
+  ingress {
     description     = "Allow Valkey from API"
     from_port       = var.valkey_port
     to_port         = var.valkey_port

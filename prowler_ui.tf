@@ -16,6 +16,7 @@ resource "aws_ecs_task_definition" "ui" {
       portMappings = [
         {
           name          = "prowler-ui-port"
+          name          = "prowler-ui-port"
           containerPort = var.ui_port
           hostPort      = var.ui_port
           protocol      = "tcp"
@@ -104,6 +105,7 @@ resource "aws_lb_target_group" "ui" {
 # Load Balancer Listener Rule for UI
 resource "aws_lb_listener_rule" "ui" {
   listener_arn = aws_lb_listener.public_secure.arn
+  listener_arn = aws_lb_listener.public_secure.arn
   priority     = 110
 
   action {
@@ -112,6 +114,7 @@ resource "aws_lb_listener_rule" "ui" {
   }
   condition {
     host_header {
+      values = ["${var.ui_domain}"]
       values = ["${var.ui_domain}"]
     }
   }
@@ -130,6 +133,7 @@ resource "aws_security_group" "ui_sg" {
     from_port       = var.ui_port
     to_port         = var.ui_port
     protocol        = "tcp"
+    security_groups = [aws_security_group.public_alb.id]
     security_groups = [aws_security_group.public_alb.id]
   }
   ingress {
@@ -176,6 +180,7 @@ resource "aws_cloudwatch_log_group" "prowler_ui" {
 
 # Additional secrets for UI
 resource "aws_secretsmanager_secret" "auth_secret" {
+  name = "prowler/auth_secret2"
   name = "prowler/auth_secret2"
 }
 
