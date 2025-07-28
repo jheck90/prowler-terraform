@@ -12,8 +12,8 @@ resource "aws_ecs_task_definition" "api" {
   family                   = "prowler-api"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
-  cpu                      = 2048
-  memory                   = 4096
+  cpu    = 2048
+  memory = 4096
 
   execution_role_arn = aws_iam_role.ecs_execution_role.arn
   task_role_arn      = aws_iam_role.ecs_task_role.arn
@@ -28,7 +28,6 @@ resource "aws_ecs_task_definition" "api" {
       portMappings = [
         {
           name          = "prowler-api-port"
-          name          = "prowler-api-port"
           containerPort = var.django_port
           hostPort      = var.django_port
           protocol      = "tcp"
@@ -40,7 +39,7 @@ resource "aws_ecs_task_definition" "api" {
         # { name = "DJANGO_ALLOWED_HOSTS", value = var.django_allowed_hosts },
         { name = "DJANGO_ALLOWED_HOSTS", value = "*" },
         { name = "DJANGO_BIND_ADDRESS", value = "0.0.0.0" },
-        # { name = "DJANGO_PORT", value = tostring(var.django_port) },
+        { name = "DJANGO_PORT", value = tostring(var.django_port) },
         # { name = "DJANGO_DEBUG", value = tostring(var.django_debug) },
         { name = "DJANGO_DEBUG", value = "True" },
         { name = "DJANGO_SETTINGS_MODULE", value = var.django_settings_module },
@@ -86,27 +85,8 @@ resource "aws_ecs_task_definition" "api" {
           "awslogs-stream-prefix" = "api"
         }
       },
-      command = ["/home/prowler/docker-entrypoint.sh", "dev"]
-    },
-
-    {
-      name        = "prowler-worker"
-      image       = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/prowler-api:${var.prowler_api_version}"
-      essential   = false
-      entryPoint  = ["/home/prowler/docker-entrypoint.sh", "worker"]
-      environment = local.worker_env_vars
-      secrets     = local.worker_secret_vars
-    },
-
-    {
-      name        = "prowler-worker-beat"
-      image       = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/prowler-api:${var.prowler_api_version}"
-      essential   = false
-      entryPoint  = ["/home/prowler/docker-entrypoint.sh", "beat"]
-      environment = local.worker_env_vars
-      secrets     = local.worker_secret_vars
+      command = ["/home/prowler/docker-entrypoint.sh", "prod"]
     }
-
   ])
 }
 
@@ -126,6 +106,11 @@ resource "aws_ecs_service" "api" {
     assign_public_ip = false
   }
 
+  #   load_balancer {
+  #     target_group_arn = aws_lb_target_group.api.arn
+  #     container_name   = "prowler-api"
+  #     container_port   = var.django_port
+  #   }
   deployment_circuit_breaker {
     enable   = true
     rollback = false
@@ -146,6 +131,42 @@ resource "aws_ecs_service" "api" {
   }
 }
 
+# API Load Balancer Target Group
+# resource "aws_lb_target_group" "api" {
+#   name        = "prowler-api-tg"
+#   port        = var.django_port
+#   protocol    = "HTTP"
+#   vpc_id      = data.aws_vpc.main.id
+#   target_type = "ip"
+
+#   health_check {
+#     path                = "/api/v1/" # Simple endpoint that always returns 200
+#     port                = "traffic-port"
+#     protocol            = "HTTP"
+#     healthy_threshold   = 2         # Minimum number of consecutive successful checks
+#     unhealthy_threshold = 5         # Number of consecutive failed checks before marking unhealthy
+#     timeout             = 10        # Seconds to wait for a response
+#     interval            = 30        # Seconds between health checks
+#     matcher             = "200-499" # Consider any 2XX or 3XX response as healthy
+#   }
+# }
+
+# # Load Balancer Listener Rule for API
+# resource "aws_lb_listener_rule" "api" {
+#   listener_arn = aws_lb_listener.public_secure.arn
+#   priority     = 100
+
+#   action {
+#     type             = "forward"
+#     target_group_arn = aws_lb_target_group.api.arn
+#   }
+#   condition {
+#     host_header {
+#       values = ["prowler-api.cisdev.i3verticals.cloud"]
+#     }
+#   }
+# }
+
 # Security Group for API service
 # TODO
 #trivy:ignore:AVD-AWS-0104
@@ -159,7 +180,6 @@ resource "aws_security_group" "api_sg" {
     from_port       = var.django_port
     to_port         = var.django_port
     protocol        = "tcp"
-    security_groups = [aws_security_group.public_alb.id]
     security_groups = [aws_security_group.public_alb.id]
   }
   ingress {
@@ -343,7 +363,6 @@ resource "aws_iam_role_policy_attachment" "attach_prowler_assume_role" {
 # Secrets for sensitive information
 resource "aws_secretsmanager_secret" "postgres_admin_password" {
   name = "prowler/postgres_admin_password2"
-  name = "prowler/postgres_admin_password2"
 }
 
 resource "aws_secretsmanager_secret_version" "postgres_admin_password_value" {
@@ -352,7 +371,6 @@ resource "aws_secretsmanager_secret_version" "postgres_admin_password_value" {
 }
 
 resource "aws_secretsmanager_secret" "postgres_password" {
-  name = "prowler/postgres_password2"
   name = "prowler/postgres_password2"
 }
 
@@ -363,7 +381,6 @@ resource "aws_secretsmanager_secret_version" "postgres_password_value" {
 
 resource "aws_secretsmanager_secret" "django_token_signing_key" {
   name = "prowler/django_token_signing_key2"
-  name = "prowler/django_token_signing_key2"
 }
 
 resource "aws_secretsmanager_secret_version" "django_token_signing_key_value" {
@@ -373,7 +390,6 @@ resource "aws_secretsmanager_secret_version" "django_token_signing_key_value" {
 
 resource "aws_secretsmanager_secret" "django_token_verifying_key" {
   name = "prowler/django_token_verifying_key2"
-  name = "prowler/django_token_verifying_key2"
 }
 
 resource "aws_secretsmanager_secret_version" "django_token_verifying_key_value" {
@@ -382,7 +398,6 @@ resource "aws_secretsmanager_secret_version" "django_token_verifying_key_value" 
 }
 
 resource "aws_secretsmanager_secret" "django_secrets_encryption_key" {
-  name = "prowler/django_secrets_encryption_key2"
   name = "prowler/django_secrets_encryption_key2"
 }
 

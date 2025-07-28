@@ -16,7 +16,6 @@ resource "aws_ecs_task_definition" "ui" {
       portMappings = [
         {
           name          = "prowler-ui-port"
-          name          = "prowler-ui-port"
           containerPort = var.ui_port
           hostPort      = var.ui_port
           protocol      = "tcp"
@@ -25,6 +24,26 @@ resource "aws_ecs_task_definition" "ui" {
       environment = [
         { name = "HOSTNAME", value = "0.0.0.0" },
         { name = "PORT", value = "3000" },
+        # { name = "PROWLER_UI_VERSION", value = var.prowler_ui_version },
+        # { name = "AUTH_URL", value = "https://${var.ui_domain}" },
+        # { name = "API_BASE_URL", value = "https://${var.api_domain}/api/v1" },
+        # { name = "NEXT_PUBLIC_API_BASE_URL", value = "https://${var.api_domain}/api/v1" },
+        # { name = "NEXT_PUBLIC_API_DOCS_URL", value = "https://${var.api_domain}/api/v1/docs" },
+        # { name = "AUTH_TRUST_HOST", value = "true" },
+        # { name = "DJANGO_BIND_ADDRESS", value = "0.0.0.0" },
+        # { name = "UI_PORT", value = tostring(var.ui_port) },
+        # { name = "NEXT_PUBLIC_PROWLER_RELEASE_VERSION", value = var.prowler_release_version },
+
+        # Social login settings - these could be moved to secrets if needed
+        # { name = "SOCIAL_GOOGLE_OAUTH_CALLBACK_URL", value = "${var.api_domain}/api/auth/callback/google" },
+        # { name = "SOCIAL_GITHUB_OAUTH_CALLBACK_URL", value = "${var.api_domain}/api/auth/callback/github" }
+      ],
+      secrets = [
+        # { name = "AUTH_SECRET", valueFrom = aws_secretsmanager_secret.auth_secret.arn },
+        # { name = "SOCIAL_GOOGLE_OAUTH_CLIENT_ID", valueFrom = aws_secretsmanager_secret.google_oauth_client_id.arn },
+        # { name = "SOCIAL_GOOGLE_OAUTH_CLIENT_SECRET", valueFrom = aws_secretsmanager_secret.google_oauth_client_secret.arn },
+        # { name = "SOCIAL_GITHUB_OAUTH_CLIENT_ID", valueFrom = aws_secretsmanager_secret.github_oauth_client_id.arn },
+        # { name = "SOCIAL_GITHUB_OAUTH_CLIENT_SECRET", valueFrom = aws_secretsmanager_secret.github_oauth_client_secret.arn }
       ],
       logConfiguration = {
         logDriver = "awslogs"
@@ -105,7 +124,6 @@ resource "aws_lb_target_group" "ui" {
 # Load Balancer Listener Rule for UI
 resource "aws_lb_listener_rule" "ui" {
   listener_arn = aws_lb_listener.public_secure.arn
-  listener_arn = aws_lb_listener.public_secure.arn
   priority     = 110
 
   action {
@@ -114,7 +132,6 @@ resource "aws_lb_listener_rule" "ui" {
   }
   condition {
     host_header {
-      values = ["${var.ui_domain}"]
       values = ["${var.ui_domain}"]
     }
   }
@@ -133,7 +150,6 @@ resource "aws_security_group" "ui_sg" {
     from_port       = var.ui_port
     to_port         = var.ui_port
     protocol        = "tcp"
-    security_groups = [aws_security_group.public_alb.id]
     security_groups = [aws_security_group.public_alb.id]
   }
   ingress {
@@ -180,7 +196,6 @@ resource "aws_cloudwatch_log_group" "prowler_ui" {
 
 # Additional secrets for UI
 resource "aws_secretsmanager_secret" "auth_secret" {
-  name = "prowler/auth_secret2"
   name = "prowler/auth_secret2"
 }
 
